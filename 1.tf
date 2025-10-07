@@ -51,7 +51,7 @@ required_version = ">= 1.0"
 
 locals {
 # Adjust to simulate concurrency (e.g. 50-200)
-concurrent_requests = 50
+concurrent_requests = 200
 
 
 urls = [for i in range(local.concurrent_requests) : "https://example.com/file-${i}.bin"]
