@@ -10,7 +10,7 @@ required_version = ">= 1.0"
 
 locals {
 # Increase to any value > 1024 to reproduce the error (e.g. 1500)
-input_count = 1500
+input_count = 1010
 
 
 inputs = [for i in range(local.input_count) : {
