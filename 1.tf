@@ -40,51 +40,58 @@ command = "echo creating ${each.value.name}"
 */
 
 terraform {
-required_version = ">= 1.0"
+  required_version = ">= 1.0"
 }
 
-
-# Terraform template to simulate concurrent or network-intensive operations
-# that may cause gevent-like blocking or timeout behavior when executed
-# in parallel (e.g., Celery or OpenTofu worker tasks with network IO).
-
+# Terraform template to simulate Celery/gevent-style blocking or timeout errors
+# caused by concurrent network or I/O operations, similar to what appears in logs like:
+#   gevent.monitor: Greenlet <Greenlet ...> appears to be blocked
 
 locals {
-# Adjust to simulate concurrency (e.g. 50-200)
-concurrent_requests = 200
+  # Number of concurrent simulated tasks (adjust to increase concurrency)
+  concurrent_tasks = 100
 
-
-urls = [for i in range(local.concurrent_requests) : "https://example.com/file-${i}.bin"]
+  urls = [for i in range(local.concurrent_tasks) : "https://httpbin.org/delay/${i % 5}"]
 }
 
+# Simulate network calls that can hang or timeout.
+resource "null_resource" "gevent_block_repro" {
+  for_each = toset(local.urls)
 
-# Dummy resource to simulate network-heavy operations via local-exec
-# Each resource tries to download a file concurrently.
-resource "null_resource" "network_repro" {
-for_each = toset(local.urls)
+  triggers = {
+    url = each.key
+  }
 
-
-triggers = {
-url = each.key
+  provisioner "local-exec" {
+    # Each curl simulates a Celery task performing a slow I/O request.
+    command = <<EOT
+      echo "[Task $$] Starting request to ${each.key}";
+      # Introduce random latency or failure to mimic blocking.
+      ( curl -s -o /dev/null --max-time $((RANDOM % 20 + 5)) ${each.key} \
+        && echo "[Task $$] Done: ${each.key}" ) \
+        || echo "[Task $$] Timeout or network block on ${each.key}";
+    EOT
+  }
 }
 
+# Simulate CPU or I/O blocking using sleep — acts like a gevent greenlet stuck in a loop.
+resource "null_resource" "gevent_cpu_block" {
+  count = local.concurrent_tasks
 
-provisioner "local-exec" {
-# Simulate long network operations with curl
-command = <<EOT
-echo "Simulating network request for ${each.key}";
-curl -s -o /dev/null --max-time 300 ${each.key} || echo "Timeout on ${each.key}";
-EOT
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "[Task $$] Simulating CPU block...";
+      # Tight loop or long sleep to emulate gevent starvation
+      sleep $((RANDOM % 10 + 5));
+      echo "[Task $$] Finished simulated blocking operation.";
+    EOT
+  }
 }
-}
 
+# Recommended test run:
+#   terraform init
+#   terraform apply -parallelism=100
+# Expected: Some tasks may timeout or hang due to simulated blocking,
+#           mimicking Celery/gevent concurrency starvation or timeout behavior.
 
-# Optional: Artificial delay to simulate I/O blocking
-resource "null_resource" "sleep_repro" {
-count = local.concurrent_requests
-
-
-provisioner "local-exec" {
-command = "sleep $((RANDOM % 10 + 1)) && echo Sleep done for ${count.index}"
-}
-}
+# You can increase `concurrent_tasks` or network delay to intensify the reproduction.
