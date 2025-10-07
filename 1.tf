@@ -7,7 +7,7 @@ variable "run_id" {
 
 
 variable "sleep_time" {
-  default = 60
+  default = 6
 }
 
 resource "null_resource" "resource2" {
