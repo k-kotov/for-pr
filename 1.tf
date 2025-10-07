@@ -1,6 +1,6 @@
 variable "run_id" {
   default = "56"
-sesitive = true
+sensitive  = true
   
 }
 
