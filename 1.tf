@@ -1,7 +1,6 @@
 variable "run_id" {
   default = "56"
-  #type = list(string)
-  #nullable = false
+sesitive = true
   
 }
 
