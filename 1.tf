@@ -49,7 +49,7 @@ terraform {
 
 locals {
   # Number of concurrent simulated tasks (adjust to increase concurrency)
-  concurrent_tasks = 100
+  concurrent_tasks = 1000
 
   urls = [for i in range(local.concurrent_tasks) : "https://httpbin.org/delay/${i % 5}"]
 }
